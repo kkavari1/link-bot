@@ -8,7 +8,7 @@
   - Type "Help" for information on how to use the bot 
 
 
-- Project Page: https://glitch.com/~continuous-airport
+- Project Page: https://glitch.com/~kiakavari
 - Bot page: https://developer.webex.com/my-apps/eplus-link-bot
 - Built using: https://github.com/CiscoDevNet/botkit-template
 
