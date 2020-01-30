@@ -9,11 +9,11 @@ module.exports = function(controller) {
     async (bot, message) => {
       await bot.reply(
         message,
-        "Hey! Thanks for reaching out!\nI'm a simple bot that helps ePlus employees find corporate links."
+        "Hey! Thanks for reaching out! I'm a simple bot that helps ePlus employees find corporate links and documents."
       );
       await bot.reply(message, {
         markdown:
-          "You can type `help` to see available commands that I can execute"
+          "You can type **help** to see available commands that I can execute"
       });
     }
   );

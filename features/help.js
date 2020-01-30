@@ -17,8 +17,6 @@ module.exports = function(controller) {
     });
 
     await bot.reply(message, { markdown: markDown });
-
-    // text += "\n- " + bot.appendMention(message, "storage") + ": store picked color as a user preference";
   });
 
   controller.commandHelp.push({
