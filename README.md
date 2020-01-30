@@ -14,6 +14,7 @@
 
 
 - Still considered a work in progress.. To Do:
+  - Prevent welcome message from fireing off 2x - memberships.created is used to determine when the bot is added to a space, but both the user and the bot are creating a new membership to a room, therefore the welcome message appears 2x
   - Create an exportable .html file for quickly adding all the links to user's browser bookmarks
   - Create a command that will allow users of the bot to suggest new commands and links to be added to the bot
   - Further testing & catch exceptions 
