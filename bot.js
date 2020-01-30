@@ -21,111 +21,129 @@
 // This is the main file for the template bot.
 
 // Load process.env values from .env file
-require('dotenv').config();
+require("dotenv").config();
 
 if (!process.env.WEBEX_ACCESS_TOKEN) {
-    console.log( 'Token missing: please provide a valid Webex Teams user or bot access token in .env or via WEBEX_ACCESS_TOKEN environment variable');
-    process.exit(1);
+  console.log(
+    "Token missing: please provide a valid Webex Teams user or bot access token in .env or via WEBEX_ACCESS_TOKEN environment variable"
+  );
+  process.exit(1);
 }
 
-
-// Read public URL from env, 
+// Read public URL from env,
 // if not specified, try to infer it from public cloud platforms environments
 // if still not successful, exit
 var public_url = process.env.PUBLIC_URL;
 if (!public_url) {
-    // Heroku hosting: available if dyno metadata are enabled, https://devcenter.heroku.com/articles/dyno-metadata
-    if (process.env.HEROKU_APP_NAME) {
-        public_url = 'https://' + process.env.HEROKU_APP_NAME + '.herokuapp.com';
-    }
+  // Heroku hosting: available if dyno metadata are enabled, https://devcenter.heroku.com/articles/dyno-metadata
+  if (process.env.HEROKU_APP_NAME) {
+    public_url = "https://" + process.env.HEROKU_APP_NAME + ".herokuapp.com";
+  }
 
-    // Glitch hosting
-    if (process.env.PROJECT_DOMAIN) {
-        public_url = 'https://' + process.env.PROJECT_DOMAIN + '.glitch.me';
-    }
+  // Glitch hosting
+  if (process.env.PROJECT_DOMAIN) {
+    public_url = "https://" + process.env.PROJECT_DOMAIN + ".glitch.me";
+  }
 }
 if (!public_url) {
-   console.log( 'Public URL missing: please provide a publically reachable app URL in .env or via PUBLIC_URL environment variable');
-   process.exit(1);
+  console.log(
+    "Public URL missing: please provide a publically reachable app URL in .env or via PUBLIC_URL environment variable"
+  );
+  process.exit(1);
 }
 
 var storage;
 
 if (process.env.REDIS_URL) {
+  const redis = require("redis");
+  const { RedisDbStorage } = require("botbuilder-storage-redis");
 
-    const redis = require('redis');
-    const { RedisDbStorage } = require('botbuilder-storage-redis');
-
-    // Initialize redis client
-    const redisClient = redis.createClient(process.env.REDIS_URL, { prefix: 'bot-storage:' });
-    storage = new RedisDbStorage(redisClient);
+  // Initialize redis client
+  const redisClient = redis.createClient(process.env.REDIS_URL, {
+    prefix: "bot-storage:"
+  });
+  storage = new RedisDbStorage(redisClient);
 }
 
 if (process.env.MONGO_URI) {
+  const { MongoDbStorage } = require("botbuilder-storage-mongodb");
 
-    const { MongoDbStorage } = require('botbuilder-storage-mongodb');
-
-    storage = new MongoDbStorage({ url: process.env.MONGO_URI })
+  storage = new MongoDbStorage({ url: process.env.MONGO_URI });
 }
 
 // Create Webex Adapter
-const uuidv4 = require('uuid/v4');
-const { WebexAdapter } = require('botbuilder-adapter-webex');
+const uuidv4 = require("uuid/v4");
+const { WebexAdapter } = require("botbuilder-adapter-webex");
 const adapter = new WebexAdapter({
-
-    access_token: process.env.WEBEX_ACCESS_TOKEN,
-    public_address: public_url,
-    secret: uuidv4()
+  access_token: process.env.WEBEX_ACCESS_TOKEN,
+  public_address: public_url,
+  secret: uuidv4()
 });
 
 // Create Botkit controller
-const { Botkit } = require('botkit');
+const { Botkit } = require("botkit");
 const controller = new Botkit({
-
-    webhook_uri: '/api/messages',
-    adapter: adapter,
-    storage
+  webhook_uri: "/api/messages",
+  adapter: adapter,
+  storage
 });
 
 if (process.env.CMS_URI) {
-    const { BotkitCMSHelper } = require('botkit-plugin-cms');
-    controller.usePlugin(new BotkitCMSHelper({
-        uri: process.env.CMS_URI,
-        token: process.env.CMS_TOKEN
-    }));
-};
-
+  const { BotkitCMSHelper } = require("botkit-plugin-cms");
+  controller.usePlugin(
+    new BotkitCMSHelper({
+      uri: process.env.CMS_URI,
+      token: process.env.CMS_TOKEN
+    })
+  );
+}
 
 // Once the bot has booted up its internal services, you can use them to do stuff.
-const path = require('path');
+const path = require("path");
 controller.ready(() => {
-
-    // load traditional developer-created local custom feature modules
-    controller.loadModules(path.join(__dirname, 'features'));
-    // Register attachmentActions webhook
-    controller.adapter.registerAdaptiveCardWebhookSubscription( controller.getConfig( 'webhook_uri' ) );
-    // Make the app public_url available to feature modules, for use in adaptive card content links
-    controller.public_url = public_url;
-    console.log('Health check available at: ' + public_url);
+  // load traditional developer-created local custom feature modules
+  controller.loadModules(path.join(__dirname, "features"));
+  // Register attachmentActions webhook
+  controller.adapter.registerAdaptiveCardWebhookSubscription(
+    controller.getConfig("webhook_uri")
+  );
+  // Make the app public_url available to feature modules, for use in adaptive card content links
+  controller.public_url = public_url;
+  console.log("Health check available at: " + public_url);
 });
 
-controller.publicFolder('/www', __dirname + '/www');
+controller.publicFolder("/www", __dirname + "/www");
 
-controller.webserver.get('/', (req, res) => {
-
-    res.send(JSON.stringify(controller.botCommons, null, 4));
+controller.webserver.get("/", (req, res) => {
+  res.send(JSON.stringify(controller.botCommons, null, 4));
 });
 
 controller.commandHelp = [];
 
-controller.checkAddMention = function (roomType, command) {
+controller.checkAddMention = function(roomType, command) {
+  var botName = adapter.identity.displayName;
 
-    var botName = adapter.identity.displayName;
+  if (roomType === "group") {
+    return `\`@${botName} ${command}\``;
+  }
 
-    if (roomType === 'group') {
+  return `\`${command}\``;
+};
 
-        return `\`@${botName} ${command}\``
+// Checks user is part of the org before allowing them to run commands, otherwise sends a message.
+async function orgCheckMiddleware(bot, message, next) {
+  if (message.type !== "self_message") {
+    if (message.orgId === process.env.ORG_ID) {
+      next();
+    } else {
+      await bot.reply(
+        message,
+        "Sorry you are not authorised to use this Bot./nThis bot is for use only by ePlus employees."
+      );
+      console.log(
+        `Attempted BOT use by person outside of org: ${message.personEmail}`
+      );
     }
-
-    return `\`${command}\``
+  }
 }
+controller.middleware.ingest.use(orgCheckMiddleware);

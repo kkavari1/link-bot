@@ -4,17 +4,20 @@
 //
 module.exports = function(controller) {
   controller.on("memberships.created", async (bot, message) => {
-    let markDown = `Hi, I am the **${controller.adapter.identity.displayName}!**  \n`;
-    markDown += "Type `help` to learn more about my skills.  ";
+    await bot.reply(
+      message,
+      "Hey, I'm the ePlus Link Bot. Thanks for reaching out! \nI can help you quickly find some frequently acccessed corporate links and documenets."
+    );
 
-    if (message.data.roomType == "group") {
-      markDown += `\n_Note that this isn't a direct 1:1 space.\n  I will answer only if mentioned!  \n`;
-      markDown += `For help, enter: ${controller.checkAddMention(
-        message.data.roomType,
-        "help"
-      )}_`;
+    if (message.data.roomType == "direct") {
+      await bot.reply(message, {
+        markdown: "Just type **help** to see what I can do for you!"
+      });
+    } else if (message.data.roomType == "group") {
+      await bot.reply(message, {
+        markdown:
+          "Since this isn't a direct 1:1 space, to respond I need to be directly mentioned. Just type **@ePlus Link Bot help** to see what I can do for you!"
+      });
     }
-
-    await bot.reply(message, { markdown: markDown });
   });
 };
